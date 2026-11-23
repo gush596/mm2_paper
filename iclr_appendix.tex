@@ -1,0 +1,875 @@
+\appendix
+
+\section{Proof of Proposition~\ref{prop:rmpa-mtn-error-bound}\label{sec:error}}
+\begin{proof}
+The conversion error in ANN-to-SNN algorithms arises primarily from residual membrane potential below the threshold that fails to generate corresponding spikes.
+
+\subsection*{Conventional Rate Coding}
+
+In conventional ANN-to-SNN conversion, the neuron accumulates the input signal $\mathbf{I}$ at each timestep:
+\[
+\mathbf{m} \leftarrow \mathbf{m} + \mathbf{I}.
+\]
+The membrane potential is then compared against the threshold $\theta$. If $\mathbf{m} > \theta$, a spike is emitted and the membrane potential is updated as:
+\[
+\mathbf{m} \leftarrow \mathbf{m} - \theta.
+\]
+After $T$ accumulation steps:
+\[
+T \cdot \mathbf{I} = \theta \cdot N_{\text{spike}} + \mathbf{m}_{\text{rest}},
+\]
+where $N_{\text{spike}}$ denotes the total number of emitted spikes. The ideal encoded value is $\mathbf{I}$, whereas the actual decoded value is:
+\[
+\frac{\theta \cdot N_{\text{spike}}}{T} = \mathbf{I} - \frac{\mathbf{m}_{\text{rest}}}{T}.
+\]
+The encoding error over $T$ steps is therefore:
+\[
+\varepsilon = \frac{\mathbf{m}_{\text{rest}}}{T}, \quad \mathbf{m}_{\text{rest}} < \theta \implies \varepsilon < \frac{\theta}{T}.
+\]
+With optimized initial membrane potential initialization, $\mathbf{m}_{\text{rest}} < \theta/2$ can be guaranteed~\cite{hao2023bridging}, yielding a tighter bound:
+\[
+\varepsilon < \frac{\theta}{2T}.
+\]
+
+\subsection*{Proposed Integration Coding}
+
+The method proposed in this paper adopts integration coding, where the input signal $\mathbf{I}$ is applied only at the first timestep:
+\[
+\mathbf{m} = \mathbf{I}.
+\]
+In subsequent steps, the residual membrane potential is amplified without further input injection. Let $n_i$ denote the amplification index at which the $i$-th spike is emitted; the corresponding spike amplitude is $\theta / 2^{n_i}$. After $n$ amplification operations, the input is decomposed as:
+\[
+\mathbf{I} = \sum_{i} \frac{\theta}{2^{n_i}} + \frac{\mathbf{m}_{\text{rest}}}{2^{n}},
+\]
+where the second term represents the residual encoding error. The encoding error is thus:
+\[
+\varepsilon = \frac{\mathbf{m}_{\text{rest}}}{2^{n}}, \quad \mathbf{m}_{\text{rest}} < \theta \implies \varepsilon < \frac{\theta}{2^{n}}.
+\]
+When the carry mechanism is applied, the error is further reduced by half:
+\[
+\varepsilon < \frac{\theta}{2^{n+1}}.
+\]
+Here, $n$ denotes the total number of amplification operations. When $T = 1$, we have $n = D$. When $T > 1$, additional amplification operations are required between timesteps to satisfy the condition $\mathbf{m}_{\text{rest}} > \theta$ prior to spike emission, yielding:
+\[
+n \geq T \cdot D,
+\]
+and the error is bounded by:
+\[
+\varepsilon < \frac{\theta}{2^{T \cdot D + 1}}.
+\]
+\end{proof}
+
+%\subsection*{Comparison}
+
+%Compared with the conventional rate coding scheme (error $< \theta / 2T$), the proposed integration coding achieves an exponentially tighter error bound of $\theta / 2^{T \cdot D + 1}$, demonstrating substantially superior encoding precision.
+
+%\section{RMPA Dynamics Walkthrough}\label{sec:rmpa_example}
+
+
+\section{RMPA Example}\label{sec:rmpa_example}
+We illustrate the internal dynamics of RMPA with a concrete example. Consider an input $\mathbf{I}^\ell = 1.4$. According to Eq.~\eqref{eqa:thres}, the threshold $\theta^\ell$ is set to $1$ ($2^{p}$, $p=0$). After a spike of $\theta^\ell=1$ is emitted, it leaves $\mathbf{m}^\ell=1.4-1$ as $0.4$ and the index $i$ of RMPA loop as $1$. In the second iteration, $\mathbf{m}^\ell$ is doubled to $0.8$ and $i$ advances to $2$; since $\mathbf{m}^\ell = 0.8 < \theta^\ell=1$, no spike is emitted. In the third iteration, $\mathbf{m}^\ell$ is doubled to $1.6$ and $i$ advances to $3$; since $\mathbf{m}^\ell = 1.6 > \theta^\ell=1$, a spike of $\theta^\ell / 2^{i-1}= 0.25$ is fired and $\mathbf{m}^\ell$ is reset to $1.6 - 1 = 0.6$. At this point, the total encoded value is $1 + 0.25 = 1.25$, with residual membrane potential $\mathbf{m}^\ell = 0.6$. The remaining encoding error is $1.4 - 1.25$, the same as the result of $\mathbf{m}^\ell / 2^{i-1} = 0.6 / 4$, which decays exponentially with increasing iterations.
+
+
+\section{Energy Consumption Analysis\label{sec:energy}}
+
+The energy savings achieved by ANN-to-SNN conversion stem from two primary sources: (1) replacing floating-point multiplication with lightweight addition operations, and (2) reducing bit-transmission cost between layers through the proposed spike encoding scheme. This section provides a detailed quantitative analysis of both aspects.
+
+\subsection{Computational Energy Consumption}
+
+Based on the proposed spike acquisition method, all multiplication operations $w \times x$ are fully decomposed into integer-level additions and bit-shift operations. For reference, prior work has established that FP32 multiplication consumes 3.7\,pJ and FP16 multiplication consumes 1.1\,pJ~\cite{energy}, as summarized in Table~\ref{tab:energy_operation}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Energy Consumption of Common Hardware Operations}
+    \label{tab:energy_operation}
+    \begin{tabular}{ccc ccc}
+        \toprule
+        \multicolumn{2}{c}{\textbf{Integer Operation}}
+        & \multicolumn{2}{c}{\textbf{Floating-Point Operation}}
+        & \multicolumn{2}{c}{\textbf{Memory Access (64-bit)}} \\
+        \cmidrule(lr){1-2} \cmidrule(lr){3-4} \cmidrule(lr){5-6}
+        Operation   & Energy   & Operation    & Energy   & Memory       & Energy        \\
+        \midrule
+        8-bit Add   & 0.03\,pJ & 16-bit FAdd  & 0.4\,pJ  & 8\,KB Cache  & 10\,pJ        \\
+        32-bit Add  & 0.1\,pJ  & 32-bit FAdd  & 0.9\,pJ  & 32\,KB Cache & 20\,pJ        \\
+        8-bit Mult  & 0.2\,pJ  & 16-bit FMult & 1.1\,pJ  & 1\,MB Cache  & 100\,pJ       \\
+        32-bit Mult & 3.1\,pJ  & 32-bit FMult & 3.7\,pJ  & DRAM         & 1.3--2.6\,nJ  \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Taking $T=2$, $D=3$ as a representative configuration (illustrated in Fig.~\ref{fig:calc} with $x=1.4$, $w=1.6$), the computation of $x \times w$ proceeds as follows.
+
+\textbf{Step 1: Spike extraction from $x$.}
+\begin{itemize}
+    \item \textit{Cycle 1}: The spike is formed by the implicit leading 1 of the mantissa concatenated with the first $D-1=2$ fractional bits.
+    \item \textit{Cycle 2}: The position $\mathrm{Tr}_2 $ of the first set bit among the remaining 8 mantissa bits is identified (here $\mathrm{Tr}_2=1 $), yielding a raw spike of \texttt{100}. A carry operation is then applied: the bit immediately following \texttt{100} is 1, so the spike is corrected to $\texttt{100}+1=\texttt{101}$.
+    \item \textit{Remark}: Since the leading bit of each spike is always 1 by construction, it need not be transmitted explicitly; only the trailing $D-1$ bits are communicated, further reducing  bit-transmission cost between layers.
+\end{itemize}
+
+\textbf{Step 2: Exponent and sign processing.}
+The sign bit of the result is obtained by XOR-ing the sign bits of $w$ and $x$. The exponent of the result is computed by summing the exponent fields of $w$ and $x$ and subtracting the bias of 15. The fractional part of $w$ is then shifted and accumulated in parallel according to the spike value of each cycle:
+\begin{itemize}
+    \item \texttt{spike = 101}: add the mantissa of $w$ and its right-shift by 2 bits.
+    \item \texttt{spike = 100}: retain the mantissa of $w$ unchanged.
+    \item \texttt{spike = 110}: add the mantissa of $w$ and its right-shift by 1 bit.
+    \item \texttt{spike = 111}: compute the difference between the left-shifted mantissa and its right-shift by 2 bits (realizable via two's complement addition).
+\end{itemize}
+
+\textbf{Step 3: Cross-cycle accumulation.}
+The fractional result from Cycle 1 is added to that of Cycle 2 right-shifted by $(\mathrm{Tr}_2 - 1)$ bits, accounting for any threshold scaling introduced by the carry operation. The final product $w \times x$ is assembled by concatenating the sign bit, the exponent, and the leading 11 bits of the accumulated mantissa.
+
+\subsubsection*{Energy Estimation Basis}
+
+Following established hardware scaling rules, energy consumption scales sub-linearly with operand width: doubling the bit-width typically increases energy by less than $2\times$~\cite{energy_scale}. On this basis, INT16 addition is estimated at 0.05--0.06\,pJ (conservatively taken as 0.06\,pJ), and sign-bit XOR is upper-bounded by INT8 addition at 0.03\,pJ.
+
+\paragraph{First-Cycle Energy}
+
+\begin{enumerate}[label=(\arabic*)]
+    \item \textbf{Sign-bit XOR}: $0.03\,\text{pJ}$.
+    \item \textbf{Exponent summation}: summing exponent bits and subtracting the bias consumes $0.06\,\text{pJ}$.
+    \item \textbf{Spike--mantissa multiplication}:
+    \begin{enumerate}[label=\textit{D=\arabic*}:, leftmargin=*]
+        \item Retain mantissa directly; $0\,\text{pJ}$.
+        \item With probability $1/2$ (\texttt{spike=10}): retain directly ($0\,\text{pJ}$); with probability $1/2$ (\texttt{spike=11}): one INT16 addition. Average: $(0+0.06)/2 = 0.03\,\text{pJ}$. Total with sign/exponent: $0.045\,\text{pJ}$.
+        \item With probability $1/4$ (\texttt{spike=100}): $0\,\text{pJ}$; with probability $1/2$ (\texttt{spike=101,110}): one INT14 addition ($\approx0.06\,\text{pJ}$); with probability $1/4$ (\texttt{spike=111}): complement-based subtraction (estimated at $1.5\times$ INT addition). Average: $0.075\,\text{pJ}$.
+    \end{enumerate}
+    \item \textbf{Rounding}: one rounding operation on the mantissa at the end of each multiplication, $0.03\,\text{pJ}$, overlapped with Cycle 1.
+\end{enumerate}
+
+\paragraph{Subsequent-Cycle Energy ($T \geq 2$)}
+
+\begin{enumerate}[label=(\arabic*)]
+    \item \textbf{Leading-one detection}: locating the first set bit and recording offset $p$ is negligible; upper-bounded by INT8 addition at $0.03\,\text{pJ}$.
+    \item \textbf{Spike--mantissa multiplication}: identical rules as Cycle 1; average energy is $0\,\text{pJ}$, $0.045\,\text{pJ}$, and $0.075\,\text{pJ}$ for $D=1,2,3$, respectively.
+    \item \textbf{Cross-cycle accumulation}: right-shift by $(D+Tr_2-1)$ bits followed by addition. The maximum operand widths are INT24 ($D=2$) and INT25 ($D=3$), both truncated to INT16 addition: $0.03+0.06=0.09\,\text{pJ}$.
+\end{enumerate}
+
+The energy requirements for all subsequent cycles ($T>2$) are identical to those of Cycle 2. The total energy consumption in representative configurations $(T, D)$ is reported in Table~\ref{tab:power_consumption}.
+
+% \begin{table}[htbp]
+%     \centering
+%     \caption{Total Energy Consumption and Energy Ratio Relative to FP32 for Different $(T,\,D)$ Configurations (Unit: pJ)}
+%     \label{tab:power_consumption}
+%     \resizebox{0.5\textwidth}{!}{%
+%     \begin{tabular}{lccc}
+%         \toprule
+%         \textbf{Energy (pJ)} & $T{=}1$ & $T{=}2$ & $T{=}3$ \\
+%         \midrule
+%         $D{=}1$ & 0.090 & 0.165 & 0.195 \\
+%         $D{=}2$ & 0.210 & 0.330 & 0.390 \\
+%         $D{=}3$ & 0.330 & 0.495 & 0.585 \\
+%         \midrule
+%         FP16 (ANN) & \multicolumn{3}{c}{1.100} \\
+%         FP32 (ANN) & \multicolumn{3}{c}{3.700} \\
+%         \bottomrule
+%     \end{tabular}}
+%     \vspace{0.8em}
+%     \resizebox{0.5\textwidth}{!}{%
+%     \begin{tabular}{lccc}
+%         \toprule
+%         \makecell{\textbf{Energy Ratio} \\ \textbf{(SNN/FP32)}} & $T{=}1$ & $T{=}2$ & $T{=}3$ \\
+%         \midrule
+%         $D{=}1$ & 0.024 & 0.045 & 0.053 \\
+%         $D{=}2$ & 0.057 & 0.089 & 0.105 \\
+%         $D{=}3$ & 0.089 & 0.134 & 0.158 \\
+%         \bottomrule
+%     \end{tabular}}
+% \end{table}
+\begin{table}[htbp]
+    \centering
+    \caption{Total Energy Consumption and Energy Ratio Relative to FP32 for Different $(T,\,D)$ Configurations (Unit: pJ)}
+    \label{tab:power_consumption}
+    \resizebox{0.5\textwidth}{!}{%
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Energy (pJ)} & $D{=}1$ & $D{=}2$ & $D{=}3$ \\
+        \midrule
+        $T{=}1$ & 0.090 & 0.210 & 0.330 \\
+        $T{=}2$ & 0.165 & 0.330 & 0.495 \\
+        $T{=}3$ & 0.195 & 0.390 & 0.585 \\
+        \midrule
+        FP16 (ANN) & \multicolumn{3}{c}{1.100} \\
+        FP32 (ANN) & \multicolumn{3}{c}{3.700} \\
+        \bottomrule
+    \end{tabular}}
+    \vspace{0.8em}
+    \resizebox{0.5\textwidth}{!}{%
+    \begin{tabular}{lccc}
+        \toprule
+        \makecell{\textbf{Energy Ratio} \\ \textbf{(SNN/FP32)}} & $T{=}1$ & $T{=}2$ & $T{=}3$ \\
+        \midrule
+        $D{=}1$ & 2.43\% & 5.68\% & 8.92\% \\
+        $D{=}2$ & 4.46\% & 8.92\% & 13.38\% \\
+        $D{=}3$ & 5.27\% & 10.54\% & 15.81\% \\
+        \bottomrule
+    \end{tabular}}
+\end{table}
+
+\begin{table}[htbp]
+    \centering
+    \caption{Total Energy Consumption and Energy Ratio for Different $(T,\,D)$ Configurations (Unit: pJ)}
+    \label{tab:power_consumption_fp16}
+    \resizebox{0.5\textwidth}{!}{%
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Energy (pJ)} & $D{=}1$ & $D{=}2$ & $D{=}3$ \\
+        \midrule
+        $T{=}1$ & 0.090 & 0.210 & 0.330 \\
+        $T{=}2$ & 0.165 & 0.330 & 0.495 \\
+        $T{=}3$ & 0.195 & 0.390 & 0.585 \\
+        \midrule
+        FP16 (ANN) & \multicolumn{3}{c}{1.100} \\
+        FP32 (ANN) & \multicolumn{3}{c}{3.700} \\
+        \bottomrule
+    \end{tabular}}
+    \vspace{0.8em}
+    \resizebox{0.5\textwidth}{!}{%
+    \begin{tabular}{lccc}
+        \toprule
+        \makecell{\textbf{Energy Ratio} \\ \textbf{(SNN/FP16)}} & $T{=}1$ & $T{=}2$ & $T{=}3$ \\
+        \midrule
+        $D{=}1$ & 8.18\% & 19.09\% & 30.00\% \\
+        $D{=}2$ & 15.00\% & 30.00\% & 45.00\% \\
+        $D{=}3$ & 17.73\% & 35.45\% & 53.18\% \\
+        \bottomrule
+    \end{tabular}}
+\end{table}
+ 
+\subsection{ bit-transmission cost between layers Evaluation}
+ In traditional schemes, the  bit-transmission cost between layers depends on the data type: if the FP32 format is adopted, 32-bit data needs to be transmitted for each multiplication calculation; if the FP16 or BF16 format is adopted, 16-bit data needs to be transmitted for each multiplication calculation.
+ The proposed  bit-transmission cost between layers consists of three parts: 1 bit sign information, 5 bit threshold information, $(D-1)$ bit spike information transmitted in the first cycle (the first bit defaults to 1 and can be omitted), and $(D-1+3)$ bit spike information transmitted in subsequent cycles (where the additional 3 bits are used to represent the threshold offset $\mathrm{Tr}_t$, with an upper limit of 8 bits: 000 for 1 and 111 for 8, and offsets exceeding 8 bits are directly ignored). The detailed transmission volume in different configurations is summarized in Table~\ref{tab:data_transmission}.
+ %\begin{wrapfigure}{r}{0.6\textwidth}
+  % \centering
+  \begin{table}[htbp]
+    \centering
+     \caption{ Bit-transmission Cost Between Layers Under Different Exponent Bit Widths and Parameter Configurations}
+  \begin{tabular}{ccccc}
+ 
+    \toprule
+     \textbf{exp\_dim} & $\boldsymbol{D}$ & $\boldsymbol{T{=}1}$ & $\boldsymbol{T{=}2}$ & $\boldsymbol{T{=}3}$ \\
+     \midrule
+     \multirow{3}{*}{5} 
+     & 1 & 6  & 9  & 15 \\
+     & 2 & 7  & 11 & 18 \\
+     & 3 & 8  & 13 & 21 \\
+     \midrule
+     \multirow{3}{*}{4} 
+     & 1 & 5  & 8  & 14 \\
+     & 2 & 6  & 10 & 17 \\
+     & 3 & 7  & 12 & 20 \\
+     \midrule
+     FP32 (ANN)  & \multicolumn{4}{c}{32} \\
+     FP16 or BF16 (ANN)  & \multicolumn{4}{c}{16} \\
+     %BF16 (ANN)  & \multicolumn{4}{c}{16} \\
+     \bottomrule
+   \end{tabular}
+   
+   \label{tab:data_transmission}
+   \end{table}
+% \end{wrapfigure}
+ As can be seen in Table~\ref{tab:data_transmission}, the transmission bit width of the proposed scheme is significantly lower than that of traditional ANN schemes, thus further saving energy consumption in the data transmission process.
+
+ 
+
+\section{Special Case: \texttt{spike} = \texttt{111}}
+\label{sec:111}
+% \begin{wrapfigure}{r}{0.4\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{Figs_new/figuersappendix.pdf}
+%     \caption{A special case for input spikes equals "\texttt{111}"}
+%     \label{fig:111}
+% \end{wrapfigure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.6\textwidth]{Figs_new/figuersappendix.pdf}
+  \caption{A special case for input spikes equals "\texttt{111}"}
+  \label{fig:111}
+\end{figure}
+
+When $D = 3$ and \texttt{spike} $= \texttt{111}$, the naive shift-add formulation requires three terms:
+\begin{equation}
+    \begin{aligned}
+        \relax[1, F_w] \cdot \texttt{111}_2 = [1, F_w] + ([1, F_w] \gg 1) + ([1, F_w] \gg 2),
+    \end{aligned}
+\end{equation}
+which would naively require a two-stage adder tree. However, this case admits a more efficient decomposition. Observing that $\texttt{111}_2 = \texttt{1000}_2 - \texttt{0001}_2$, and noting that multiplication by $\texttt{1000}_2$ and $\texttt{0001}_2$ correspond to a left shift by 1 bit and a right shift by 2 bits, respectively (relative to the implicit leading bit), we obtain:
+\[
+[1, F_w] \cdot \texttt{111}_2 = ([1, F_w] \ll 1) - ([1, F_w] \gg 2),
+\]
+which requires only a single subtraction. In hardware, subtraction is implemented via two's complement addition: negating $[1, F_w] \gg 2$ is achieved by a bitwise complement followed by adding 1 (absorbed into the carry-in of the adder), yielding:
+\[
+[1, F_w] \cdot \texttt{111}_2 = ([1, F_w] \ll 1) + \overline{([1, F_w] \gg 2)},
+\]
+where $\ll$ and $\gg$ denote left and right logical shift respectively, and $\overline{(\cdot)}$ denotes the two's complement negation. As illustrated in Fig.~\ref{fig:111}, the datapath consists of a left-shift-by-1 unit on the lower path, a right-shift-by-2 unit followed by a two's complement unit on the upper path, and a single adder combining both results.
+% \begin{figure}[htbp]
+%     \centering
+%     \includegraphics[width=0.8\linewidth]{Figs_new/figuersappendix.pdf}
+%     \caption{Enter Caption}
+%     \label{fig:111}
+% \end{figure}
+
+% \begin{wrapfigure}{r}{0.5\textwidth}
+%     \centering
+%     \includegraphics[width=\linewidth]{Figs_new/figuersappendix.pdf}
+%     \caption{Enter Caption}
+%     \label{fig:111}
+% \end{wrapfigure}
+This decomposition ensures that, for all spike patterns with $D \leq 3$, each intra timestep computation requires \textbf{at most one adder}, with no case requiring more than a single addition or subtraction operation. The hardware overhead is therefore strictly bounded regardless of the spike value, confirming the area efficiency of the proposed design.
+
+\section{Single-Step vs.\ Multi-Step Execution Modes}
+\addcontentsline{toc}{section}{Appendix A: Single-Step vs.\ Multi-Step Execution Modes}
+
+In ANN-to-SNN conversion, two execution modes can be distinguished based on the 
+temporal scheduling strategy: \textit{single-step mode} and \textit{multi-step mode}.
+
+\paragraph{Single-Step Mode.}
+In single-step mode, the input data at each time step propagates through the entire 
+network sequentially, layer by layer, before the next time step begins. That is, at 
+time step $t$, the spike train is fully processed across all layers---from input to 
+output---prior to the commencement of computation at time step $t+1$.
+
+\paragraph{Multi-Step Mode.}
+In multi-step mode, the execution order is transposed: for each layer, computations 
+across all $T$ time steps are completed before proceeding to the next layer. 
+Specifically, layer $\ell$ processes inputs for all time steps $t = 1, 2, \ldots, T$ 
+and only then forwards the accumulated results to layer $\ell+1$.
+
+\paragraph{Recommendation for RMPA.}
+Even when RMPA is deployed without its hardware-level optimizations, we recommend 
+adopting multi-step mode for the following reasons:
+
+\begin{itemize}[leftmargin=*, nosep]
+    \item \textbf{Hardware compatibility.} Multi-step mode aligns more naturally with 
+    the dataflow patterns of contemporary hardware accelerators, where minimizing 
+    memory access overhead is critical for sustained throughput.
+
+    \item \textbf{Reduced weight reloading.} By completing all time steps within a 
+    given layer before advancing to the next, multi-step mode eliminates the need to 
+    repeatedly reload the same synaptic weights for each time step, thereby 
+    significantly reducing memory bandwidth pressure.
+
+    \item \textbf{Improved parallelism.} Multi-step mode naturally exposes 
+    intra-layer parallelism across time steps, enabling more efficient utilization of 
+    vectorized or batched computation resources.
+\end{itemize}
+
+\paragraph{Adapting RMPA for Single-Step Mode.}
+If single-step mode is required by the deployment scenario, a minor modification to 
+RMPA is necessary. Specifically, for the second and all subsequent time steps 
+($t \geq 2$), when newly generated spike-driven data is forwarded to downstream 
+layers, the membrane potential $m_\ell$ of layer $\ell$ must be updated by incorporating 
+the incoming contribution scaled by $2^{i-1}$:
+\begin{equation}
+    \mathbf{m}_\ell(t) \leftarrow V_\ell(t) + 2^{i-1} \cdot \mathbf{I}_\ell(t), \qquad t \geq 2,
+\end{equation}
+where $\mathbf{I}_\ell(t)$ denotes the input increment arriving at layer $\ell$ at time step $t$, 
+and $i$ is the number of RMPA loop. This scaling ensures that the accumulated membrane 
+potential correctly reflects the appropriately amplified value.
+
+% \section{Detailed experimental setup} \label{sec:exp_setup}
+% In this experiment, we use AdamW as the optimizer, which
+% is adopted with a base learning rate of $6 \times 10 ^{-4}$
+% . The actual learning rate was calculated as
+%  The batch size is set to 512, which is realized
+% by accumulated gradient iterations. All the experiments are executed on a single NVIDIA A100 GPU with PyTorch 2.10.0 and CUDA 12.8. 
+
+\section{Ablation Study on Query Spiking Strategy}
+\label{sec:query_ablation}
+For the spiking conversion of Transformer models, this paper investigates the trade-off between computational efficiency and model accuracy in the treatment of the query (q) representation. By default, 
+q is retained in floating-point form and excluded from spike conversion, while spiking conversion is applied exclusively to the key (k) and value(v). This design treats q as a weight-like parameter, which eliminates floating-point multiply-accumulate operations in the attention mechanism while preserving model accuracy. To assess the impact of this design choice, we conduct ablation experiments on whether to convert q into spikes, with results reported in Table~\ref{tab:query}.
+
+\begin{table*}[htbp]
+  \centering
+  \caption{Experiments on ViT models under different $(T,D)$ settings. \texttt{q\_include} denotes the variant that also converts the query ($q$) into spikes (in addition to $k$ and $v$), while \texttt{Default} converts only $k$ and $v$.}
+  \label{tab:query}
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{llcccccccccc}
+    \toprule
+    \multicolumn{1}{c}{\multirow{2}{*}{Task}} & 
+    \multicolumn{1}{c}{\multirow{2}{*}{Model}} & 
+    \multicolumn{1}{c}{\multirow{2}{*}{ANN}} & 
+    \multicolumn{1}{c}{\multirow{2}{*}{$D$}} & 
+    \multicolumn{3}{c}{Default} & 
+    \multicolumn{3}{c}{q\_include} \\
+    \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+    & & & & $T{=}1$ & $T{=}2$ & $T{=}3$ & $T{=}1$ & $T{=}2$ & $T{=}3$ \\
+    
+    \midrule
+    \multirow{10}{*}{ImageNet-1K} 
+    & \multirow{3}{*}{vit\_small\_patch16\_224} & \multirow{3}{*}{78.04}
+    & 1 & 48.20 & 76.27 & 77.80 & 42.34 & 76.25 & 77.87 \\
+    & & & 2 & 73.78 & 77.94 & 78.03 & 73.26 & 77.93 & 78.04 \\
+    & & & 3 & 77.01 & 78.06 & 78.03 & 76.94 & 78.06 & 78.03 \\
+    \cmidrule(lr){2-10}
+    & \multirow{3}{*}{vit\_base\_patch16\_224} & \multirow{3}{*}{82.91}
+    & 1 & 74.00 & 82.21 & 82.74 & 72.37 & 82.17 & 82.73 \\
+    & & & 2 & 80.89 & 82.77 & 82.89 & 80.71 & 82.76 & 82.87 \\
+    & & & 3 & 82.41 & 82.87 & 82.91 & 82.43 & 82.87 & 82.92 \\
+    \cmidrule(lr){2-10}
+    & \multirow{3}{*}{vit\_large\_patch16\_224} & \multirow{3}{*}{84.88}
+    & 1 & 80.89 & 84.46 & 84.79 & 80.26 & 84.43 & 84.79 \\
+    & & & 2 & 84.03 & 84.80 & 84.89 & 83.96 & 84.81 & 84.89 \\
+    & & & 3 & 84.45 & 84.89 & 84.88 & 84.41 & 84.89 & 84.88 \\
+    
+    \midrule
+    
+    \multirow{15}{*}{MMLU}
+    & \multirow{3}{*}{qwen3\_0.6b\_base} & \multirow{3}{*}{52.41}
+    & 1 & 29.06 & 50.29 & 52.11 & 25.58 & 49.47 & 52.31 \\
+    & & & 2 & 45.85 & 52.55 & 52.56 & 43.40 & 52.24 & 52.73 \\
+    & & & 3 & 51.08 & 52.60 & 52.49 & 50.11 & 52.60 & 52.60 \\
+    \cmidrule(lr){2-10}
+    & \multirow{3}{*}{qwen3\_1.7b\_base} & \multirow{3}{*}{62.61}
+    & 1 & 41.59 & 60.80 & 62.37 & 31.94 & 60.12 & 62.47 \\
+    & & & 2 & 57.83 & 62.42 & 62.53 & 55.62 & 62.34 & 62.78 \\
+    & & & 3 & 60.87 & 62.26 & 62.50 & 60.93 & 62.63 & 62.56 \\
+    \cmidrule(lr){2-10}
+    & \multirow{3}{*}{qwen3\_4b\_base} & \multirow{3}{*}{72.90}
+    & 1 & 57.58 & 72.34 & 72.70 & 43.85 & 71.57 & 72.72 \\
+    & & & 2 & 69.29 & 72.75 & 73.10 & 67.40 & 72.62 & 73.07 \\
+    & & & 3 & 72.21 & 72.92 & 73.04 & 71.85 & 73.00 & 73.04 \\
+    \cmidrule(lr){2-10}
+    & \multirow{3}{*}{qwen3\_8b\_base} & \multirow{3}{*}{76.85}
+    & 1 & 65.26 & 76.13 & 76.86 & 54.42 & 75.97 & 76.51 \\
+    & & & 2 & 74.88 & 76.71 & 76.78 & 73.06 & 76.59 & 76.81 \\
+    & & & 3 & 76.45 & 76.90 & 76.81 & 75.99 & 76.81 & 76.73 \\
+    \cmidrule(lr){2-10}
+    & \multirow{3}{*}{qwen3\_14b\_base} & \multirow{3}{*}{80.47}
+    & 1 & 70.70 & 79.73 & 80.39 & 62.08 & 79.58 & 80.37 \\
+    & & & 2 & 78.63 & 80.47 & 80.45 & 77.43 & 80.42 & 80.65 \\
+    & & & 3 & 80.37 & 80.49 & 80.49 & 79.83 & 80.40 & 80.44 \\
+
+    \bottomrule
+  \end{tabular}
+  }
+\end{table*}
+
+% \section{Ablation on Exponent-bit Width Reduction}
+% \label{sec:ablation_expdim}
+
+% By default, we adopt the full FP16 exponent bit-width (5 bits) to set the threshold range, which preserves conversion accuracy. To evaluate the trade-off between efficiency and accuracy, we reduce the exponent bit-width to 4 and report the results in Table~\ref{tab:ablation2}. Across all $(T, D)$ configurations, the accuracy drop is marginal, while the number of active thresholds and the inter-layer bit-transmission cost is substantially reduced. This confirms that the proposed threshold-range optimization offers a practical knob for resource-constrained deployment with negligible performance sacrifice.
+
+% \begin{table*}[htbp]
+%   \centering
+%   \scriptsize  
+%   \caption{Ablation study on lightweight threshold-range optimization via exponent-bit 
+%   width reduction (\texttt{width=4}) on ImageNet-1K, evaluated across different 
+%   $(T, D)$ settings. \texttt{Default} refers to the full fp16 exponent-bit width 
+%   , with spike conversion applied to $k$ and $v$ only in Transformer 
+%   blocks.}
+%   \label{tab:ablation2}
+%   \resizebox{\textwidth}{!}{
+%   \begin{tabular}{cccccccccc}
+%     \toprule
+%     \multirow{2}{*}{Model} & \multirow{2}{*}{ANN} & \multirow{2}{*}{D} 
+%     & \multicolumn{3}{c}{Default} 
+%     & \multicolumn{3}{c}{Exponent-bit width $= 4$} \\
+%     \cmidrule(lr){4-6} \cmidrule(lr){7-9}
+%     & & & $T=1$ & $T=2$ & $T=3$ & $T=1$ & $T=2$ & $T=3$ \\
+%     \midrule
+%     \multirow{3}{*}{ViT-S (patch16\_224)} 
+%     & \multirow{3}{*}{78.04} 
+%     & 1 & 48.20 & 76.27 & 77.80 & 55.26 & 76.29 & 77.47 \\
+%     & & 2 & 73.78 & 77.94 & 78.03 & 73.94 & 77.66 & 77.65 \\
+%     & & 3 & 77.01 & 78.06 & 78.03 & 76.92 & 77.66 & 77.65 \\
+%     \midrule
+%     \multirow{3}{*}{ViT-B (patch16\_224)}
+%     & \multirow{3}{*}{82.91} 
+%     & 1 & 74.00 & 82.21 & 82.74 & 75.80 & 81.30 & 81.77 \\
+%     & & 2 & 80.89 & 82.77 & 82.89 & 80.30 & 81.74 & 81.88 \\
+%     & & 3 & 82.41 & 82.87 & 82.91 & 81.38 & 81.87 & 81.87 \\
+%     \midrule
+%     \multirow{3}{*}{ViT-L (patch16\_224)} 
+%     & \multirow{3}{*}{84.88} 
+%     & 1 & 80.89 & 84.46 & 84.79 & 81.14 & 83.81 & 84.31 \\
+%     & & 2 & 84.03 & 84.80 & 84.89 & 83.25 & 84.31 & 84.32 \\
+%     & & 3 & 84.45 & 84.89 & 84.88 & 84.01 & 84.30 & 84.30 \\
+%     \bottomrule
+%   \end{tabular}
+%   }
+% \end{table*}
+
+\section{Additional Experimental Results on ImageNet-1K}\label{overall_imagenet}
+
+This section presents comprehensive experimental results of our SNN conversion framework on the ImageNet-1K dataset across various models, including EVA02, ViT, ResNet, and VGG. We report accuracy in different timesteps \(T\) and spike dimensions \(D\) in table~\ref{tab:appendix_imagenet}. The ANN baseline accuracy is provided for reference.
+
+\begin{table*}[htbp]
+\centering
+\caption{Accuracy (\%) on ImageNet-1K Dataset under Different $T$ and $D$ Settings}
+\label{tab:appendix_imagenet}
+\begin{minipage}{0.48\textwidth}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & $T=1$ & $T=2$ & $T=3$ & \textbf{ANN} \\
+\midrule
+\multicolumn{5}{l}{\textbf{eva02\_tiny\_patch14\_336}} \\
+$d=1$ & 73.26 & 80.11 & 80.53 & 80.62 \\
+$d=2$ & 78.82 & 80.60 & 80.65 \\
+$d=3$ & 80.19 & 80.63 & 80.61 \\
+\midrule
+\multicolumn{5}{l}{\textbf{eva02\_small\_patch14\_336}} \\
+$d=1$ & 80.18 & 85.22 & 85.68 & 85.73 \\
+$d=2$ & 84.54 & 85.74 & 85.75 \\
+$d=3$ & 85.45 & 85.70 & 85.73 \\
+\midrule
+\multicolumn{5}{l}{\textbf{eva02\_base\_patch14\_448}} \\
+$d=1$ & 81.53 & 87.85 & 88.25 & 88.26 \\
+$d=2$ & 86.88 & 88.28 & 88.26 \\
+$d=3$ & 88.00 & 88.27 & 88.26 \\
+\midrule
+\multicolumn{5}{l}{\textbf{eva02\_large\_patch14\_448}} \\
+$d=1$ & 85.66 & 89.32 & 89.57 & 89.63 \\
+$d=2$ & 88.88 & 89.60 & 89.63 \\
+$d=3$ & 89.46 & 89.63 & 89.63 \\
+\midrule
+\multicolumn{5}{l}{\textbf{eva\_giant\_patch14\_336}} \\
+$d=1$ & 88.65 & 89.41 & 89.57 & 89.62 \\
+$d=2$ & 89.27 & 89.56 & 89.60 \\
+$d=3$ & 89.47 & 89.58 & 89.62 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & $T=1$ & $T=2$ & $T=3$ & \textbf{ANN} \\
+\midrule
+\multicolumn{5}{l}{\textbf{vit\_small\_patch16\_224}} \\
+$d=1$ & 48.20 & 76.27 & 77.80 & 78.04 \\
+$d=2$ & 73.78 & 77.94 & 78.03 \\
+$d=3$ & 77.01 & 78.06 & 78.03 \\
+\midrule
+\multicolumn{5}{l}{\textbf{vit\_base\_patch16\_224}} \\
+$d=1$ & 74.00 & 82.21 & 82.74 & 82.91 \\
+$d=2$ & 80.89 & 82.77 & 82.89 \\
+$d=3$ & 82.41 & 82.87 & 82.91 \\
+\midrule
+\multicolumn{5}{l}{\textbf{vit\_large\_patch16\_224}} \\
+$d=1$ & 80.89 & 84.46 & 84.79 & 84.88 \\
+$d=2$ & 84.03 & 84.80 & 84.89 \\
+$d=3$ & 84.45 & 84.89 & 84.88 \\
+\midrule
+\multicolumn{5}{l}{\textbf{resnet34}} \\
+$d=1$ & 20.23 & 72.45 & 75.83 & 76.09 \\
+$d=2$ & 66.59 & 76.08 & 76.12 \\
+$d=3$ & 74.81 & 76.13 & 76.09 \\
+\midrule
+\multicolumn{5}{l}{\textbf{vgg16}} \\
+$d=1$ & 49.82 & 68.86 & 70.97 & 71.12 \\
+$d=2$ & 65.25 & 70.94 & 71.10 \\
+$d=3$ & 69.72 & 71.08 & 71.12 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\end{table*}
+
+\section{Experimental Results on CIFAR datasets}\label{overall_cifars}
+
+% \begin{wraptable}{r}{0.62\textwidth}
+%   \centering
+%   \vspace{-1em}  % 微调垂直对齐
+%   \caption{Classification Accuracy on CIFAR-10 and CIFAR-100 (\%)}
+%   \begin{tabular}{lccccc}
+%     \toprule
+%     Dataset & \(D\) & \(T\!=\!1\) & \(T\!=\!2\) & \(T\!=\!3\) & ANN \\
+%     \midrule
+%     \multirow{3}{*}{CIFAR-10}
+%     & 1 & 70.27 & 97.97 & 98.40 & 98.42 \\
+%     & 2 & 96.57 & 98.41 & 98.40 & — \\
+%     & 3 & 98.05 & 98.37 & 98.43 & — \\
+%     \midrule
+%     \multirow{3}{*}{CIFAR-100}
+%     & 1 & 36.70 & 87.95 & 89.46 & 89.81 \\
+%     & 2 & 83.07 & 89.40 & 89.82 & — \\
+%     & 3 & 88.59 & 89.82 & 89.75 & — \\
+%     \bottomrule
+%   \end{tabular}
+%   \label{tab:cifar_all}
+% \end{wraptable}
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=1\linewidth]{Figs_new/cifar_accuracy.pdf}
+    \caption{Test accuracy of ViT-S on CIFAR-10 (left) and CIFAR-100 (right) under different settings of  $T$ and $D$.}
+    \label{fig:cifar}
+\end{figure}
+
+We evaluate the converted ViT-S model in CIFAR tasks under different combinations of parameters and report the post-conversion accuracy in figure~\ref{fig:cifar}.
+%In this experiment, we evaluate our method on CIFAR-10 and CIFAR-100 under varying network depths \(D\) and timesteps \(T\). Following common practices in SNN conversion, we adopt the same architectural configurations as the ANN counterparts without additional modifications. The results are presented in Table~\ref{tab:cifar_all}. 
+For CIFAR-10, with \(D=1\), our method achieves \textbf{98.40\%} accuracy at \(T=3\), closely matching the ANN baseline (98.42\%) while requiring only 3 timesteps. Remarkably, even at \(T=2\), the accuracy reaches 97.97\%, with a negligible drop of 0.45\%. For CIFAR-100, our method attains \textbf{89.46\%} at \(T=3\) and 87.95\% at \(T=2\), again approaching the baseline of the ANN of 89.81\%.
+
+We further observe that deeper networks enable faster convergence. With \(D=3\), the SNN on CIFAR-10 already reaches 98.05\% at \(T=1\) and saturates at 98.37\% for \(T=3\), effectively matching the ANN. Similarly, on CIFAR-100, \(D=3\) yields 88.59\% at \(T=1\) and 89.82\% at \(T=2\), narrowing the gap to within 0.06\% of the ANN. These results demonstrate that our method achieves almost lossless conversion with as few as \(T=2\) timesteps, and deeper architectures further reduce the required latency. 
+
+% \begin{table}[htbp]
+%   \centering
+%   \caption{Classification Accuracy on CIFAR-10 and CIFAR-100 (\%)}
+%   \begin{tabular}{lccccc}
+%     \toprule
+%     Dataset & \(D\) & \(T\!=\!1\) & \(T\!=\!2\) & \(T\!=\!3\) & ANN \\
+%     \midrule
+%     \multirow{3}{*}{CIFAR-10}
+%     & 1 & 70.27 & 97.97 & 98.40 & 98.42 \\
+%     & 2 & 96.57 & 98.41 & 98.40 & — \\
+%     & 3 & 98.05 & 98.37 & 98.43 & — \\
+%     \midrule
+%     \multirow{3}{*}{CIFAR-100}
+%     & 1 & 36.70 & 87.95 & 89.46 & 89.81 \\
+%     & 2 & 83.07 & 89.40 & 89.82 & — \\
+%     & 3 & 88.59 & 89.82 & 89.75 & — \\
+%     \bottomrule
+%   \end{tabular}
+%   \label{tab:cifar_all}
+% \end{table}
+
+\section{Experimental Results on MMLU Benchmark}\label{overall_mmlu}
+%paragraph{Evaluation on MMLU Benchmark}
+
+\begin{figure}[ht!]
+    \centering
+    \includegraphics[width=0.7\linewidth]{Figs_new/mmlu_comparison.pdf}
+    \caption{Conversion results on MMLU for different models}
+    \label{fig:mmlu}
+\end{figure}
+
+The Qwen3\cite{qwen3} and Llama2\cite{llama2} series models are evaluated on the  MMLU benchmark in this work. We perform comprehensive evaluations on this key NLP benchmark, and the corresponding results are shown in figure~\ref{fig:mmlu}.
+
+% Among the 29 evaluation items, only the Llama2-7B model on the Winogrande task and the Qwen3-1.7B-Base model on the MMLU task suffer accuracy drops of 0.32\% and 0.35\%, respectively. Meanwhile, the Llama2-7B model incurs accuracy losses of 0.12\% and 0.1\% in the ARC-E and HellaSwag\_norm tasks, respectively. For the remaining 25 tasks, the accuracy loss is less than 0.1\%, which verifies the universality and effectiveness of the proposed paradigm in CV and NLP tasks.
+\clearpage
+\section{Additional Experimental Results of LLaMA2-7B and LLaMA2-13b}\label{overall_llama}
+
+This section presents comprehensive experimental results of our SNN conversion framework on various NLP tasks for the LLaMA2-7B and LLaMA2-13B models in table~\ref{tab:appendix_llama}. We report accuracy in different timesteps \(T\) and spike dimensions \(D\). The ANN baseline accuracy is provided for reference.
+
+\begin{table*}[htbp!]
+\centering
+\caption{Accuracy (\%) of LLaMA2-7B and LLaMA2-13B on NLP Tasks under Different $T$ and $D$ Settings}
+\label{tab:appendix_llama}
+\resizebox{0.8\textwidth}{!}{
+\begin{tabular}{lccccclcccc}
+\toprule
+& \multicolumn{4}{c}{\textbf{LLaMA2-7B}} & & \multicolumn{4}{c}{\textbf{LLaMA2-13B}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){7-10}
+\textbf{Task} & $$T{=}1$$ & $$T{=}2$$ & $$T{=}3$$ & ANN & & $$T{=}1$$ & $$T{=}2$$ & $$T{=}3$$ & ANN \\
+\midrule
+\multicolumn{10}{l}{\textbf{MMLU}} \\
+$$d{=}1$$ & 26.90 & 43.88 & 45.93 & 45.75 & & 33.76 & 53.62 & 54.99 & 55.13 \\
+$$d{=}2$$ & 39.97 & 45.67 & 45.73 &  & & 51.40 & 55.05 & 55.23 &  \\
+$$d{=}3$$ & 44.92 & 45.95 & 45.93 &  & & 54.15 & 55.31 & 55.14 & \\
+\midrule
+\multicolumn{10}{l}{\textbf{PIQA-norm}} \\
+$$d{=}1$$ & 72.14 & 79.11 & 78.56 & 78.45 & & 74.32 & 80.09 & 80.52 & 80.52 \\
+$$d{=}2$$ & 77.37 & 78.73 & 78.84 &  & & 79.60 & 80.69 & 80.25 &  \\
+$$d{=}3$$ & 78.78 & 78.67 & 78.51 & & & 80.25 & 80.58 & 80.47 &  \\
+\midrule
+\multicolumn{10}{l}{\textbf{ARC-Challenge norm}} \\
+$$d{=}1$$ & 33.19 & 44.88 & 45.48 & 45.73 & & 39.76 & 48.55 & 48.55 & 48.89 \\
+$$d{=}2$$ & 43.60 & 45.48 & 45.65 &  & & 47.78 & 48.72 & 48.38 &  \\
+$$d{=}3$$ & 46.16 & 45.65 & 45.99 &  & & 49.40 & 49.15 & 48.55 & \\
+\midrule
+\multicolumn{10}{l}{\textbf{ARC-Easy norm}} \\
+$$d{=}1$$ & 58.33 & 73.61 & 74.75 & 74.87 & & 66.79 & 75.93 & 76.60 & 76.56 \\
+$$d{=}2$$ & 72.26 & 73.99 & 74.54 &  & & 75.51 & 76.26 & 76.47 &  \\
+$$d{=}3$$ & 73.82 & 74.75 & 74.66 &  & & 75.80 & 76.47 & 76.43 & \\
+\midrule
+\multicolumn{10}{l}{\textbf{Winogrande norm}} \\
+$$d{=}1$$ & 60.38 & 69.38 & 69.46 & 69.38 & & 62.67 & 71.90 & 71.90 & 72.22 \\
+$$d{=}2$$ & 67.01 & 69.53 & 69.30 & & & 71.43 & 72.53 & 72.22 &  \\
+$$d{=}3$$ & 67.56 & 69.06 & 69.46 &  & & 70.56 & 72.14 & 72.53 &  \\
+\midrule
+\multicolumn{10}{l}{\textbf{HellaSwag norm}} \\
+$$d{=}1$$ & 65.61 & 75.72 & 76.30 & 76.28 & & 66.05 & 79.04 & 79.55 & 79.71 \\
+$$d{=}2$$ & 74.65 & 76.25 & 76.18 &  & & 78.57 & 79.63 & 79.71 &  \\
+$$d{=}3$$ & 75.77 & 76.18 & 76.25 &  & & 79.23 & 79.69 & 79.72 & \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+\clearpage
+\section{MMLU Results of Qwen3 Series Models}\label{overall_qwen3}
+This section supplements the accuracy of the MMLU task of the Qwen3 series with different timesteps \(T\) and spike dimensions \(D\) in table~\ref{tab:appendix_qwen3_mmlu}, with the original ANN accuracy provided as the baseline reference.
+
+% \begin{table*}[htbp!]
+% \centering
+% \caption{MMLU Accuracy (\%) of Qwen3 Series Models under Different $T$ and $D$ Settings}
+% \label{tab:appendix_qwen3_mmlu}
+% \resizebox{0.55\textwidth}{!}{
+% \begin{tabular}{lcccc}
+% \toprule
+% \textbf{Model} & $$T=1$$ & $$T=2$$ & $$T=3$$ & \textbf{ANN} \\
+% \midrule
+% \multicolumn{5}{l}{\textbf{qwen3-0.6b-base}} \\
+% $$d=1$$ & 29.06 & 50.29 & 52.11 & 52.41 \\
+% $$d=2$$ & 45.85 & 52.55 & 52.56 & \\
+% $$d=3$$ & 51.08 & 52.60 & 52.49 & \\
+% \midrule
+% \multicolumn{5}{l}{\textbf{qwen3-1.7b-base}} \\
+% $$d=1$$ & 41.59 & 60.80 & 62.37 & 62.61 \\
+% $$d=2$$ & 57.83 & 62.42 & 62.53 & \\
+% $$d=3$$ & 60.87 & 62.26 & 62.50 & \\
+% \midrule
+% \multicolumn{5}{l}{\textbf{qwen3-4b-base}} \\
+% $$d=1$$ & 57.58 & 72.34 & 72.70 & 72.90 \\
+% $$d=2$$ & 69.29 & 72.75 & 73.10 &  \\
+% $$d=3$$ & 72.21 & 72.92 & 73.04 &  \\
+% \midrule
+% \multicolumn{5}{l}{\textbf{qwen3-8b-base}} \\
+% $$d=1$$ & 65.26 & 76.13 & 76.86 & 76.85 \\
+% $$d=2$$ & 74.88 & 76.71 & 76.78 &  \\
+% $$d=3$$ & 76.45 & 76.90 & 76.81 &  \\
+% \midrule
+% \multicolumn{5}{l}{\textbf{qwen3-14b-base}} \\
+% $$d=1$$ & 70.70 & 79.73 & 80.39 & 80.47 \\
+% $$d=2$$ & 78.63 & 80.47 & 80.45 &  \\
+% $$d=3$$ & 80.37 & 80.49 & 80.49 &  \\
+% \bottomrule
+% \end{tabular}
+% }
+% \end{table*}
+
+\begin{table*}[htbp!]
+\centering
+\caption{MMLU Accuracy (\%) of Qwen3 Series Models under Different $T$ and $D$ Settings}
+\label{tab:appendix_qwen3_mmlu}
+\small
+\begin{tabular}[t]{lcccc}
+\toprule
+\textbf{Model} & $T{=}1$ & $T{=}2$ & $T{=}3$ & \textbf{ANN} \\
+\midrule
+\multicolumn{5}{l}{\textbf{qwen3-0.6b-base}} \\
+$d{=}1$ & 29.06 & 50.29 & 52.11 & 52.41 \\
+$d{=}2$ & 45.85 & 52.55 & 52.56 & \\
+$d{=}3$ & 51.08 & 52.60 & 52.49 & \\
+\midrule
+\multicolumn{5}{l}{\textbf{qwen3-1.7b-base}} \\
+$d{=}1$ & 41.59 & 60.80 & 62.37 & 62.61 \\
+$d{=}2$ & 57.83 & 62.42 & 62.53 & \\
+$d{=}3$ & 60.87 & 62.26 & 62.50 & \\
+\midrule
+\multicolumn{5}{l}{\textbf{qwen3-4b-base}} \\
+$d{=}1$ & 57.58 & 72.34 & 72.70 & 72.90 \\
+$d{=}2$ & 69.29 & 72.75 & 73.10 & \\
+$d{=}3$ & 72.21 & 72.92 & 73.04 & \\
+\bottomrule
+\end{tabular}
+\hspace{2.5em}
+\begin{tabular}[t]{lcccc}
+\toprule
+\textbf{Model} & $T{=}1$ & $T{=}2$ & $T{=}3$ & \textbf{ANN} \\
+\midrule
+\multicolumn{5}{l}{\textbf{qwen3-8b-base}} \\
+$d{=}1$ & 65.26 & 76.13 & 76.86 & 76.85 \\
+$d{=}2$ & 74.88 & 76.71 & 76.78 & \\
+$d{=}3$ & 76.45 & 76.90 & 76.81 & \\
+\midrule
+\multicolumn{5}{l}{\textbf{qwen3-14b-base}} \\
+$d{=}1$ & 70.70 & 79.73 & 80.39 & 80.47 \\
+$d{=}2$ & 78.63 & 80.47 & 80.45 & \\
+$d{=}3$ & 80.37 & 80.49 & 80.49 & \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\section{Support for More Formats\label{sec:fp8_int4}}
+
+We emphasize that based on ANN2SNN, this framework can further combine with model quantization strategies, bringing additional benefits in data movement and energy consumption. The two complement each other, making it more friendly for edge AI. For this reason, we explored the efficiency and performance comparison of models under extreme quantization conditions (INT4). Following the energy estimation method for ultra-low bit operations described in~\cite{liu2020birealnet,qin2020binary}, we set the energy consumption of single-bit logic gate operations to 3.75\,fJ and calculated the efficiency of the quantized model under INT4 or FP8 conditions and the conversion model under the PRIME framework (as shown in Table~\ref{tab:fp8_prime},\ref{tab:int4_prime}).
+
+\subsection{FP8 Format}
+
+Table~\ref{tab:fp8_prime} summarizes the energy consumption and bit-transmission cost after PRIME conversion on FP8 operands.Table~\ref{tab:qwen3_fp8_mmlu} reports the MMLU accuracy of Qwen3-0.6B in FP8 format before and after PRIME conversion.
+
+\begin{table*}[htbp]
+  \centering
+  \scriptsize
+  \caption{Energy and bit-transmission cost of FP8 format after PRIME conversion.}
+  \label{tab:fp8_prime}
+  \resizebox{1\textwidth}{!}{
+  \begin{tabular}{lcccc}
+    \toprule
+    & Energy (pJ) & Energy Ratio (vs.\ FP8) & Transmission Bits & Transmission Ratio (vs.\ FP8) \\
+    \midrule
+    T1D1 & 0.0375  & 13.39\%   & 5 & 62.50\%  \\
+    T1D2 & 0.04875 & 17.41\%   & 6 & 75.00\%  \\
+    T2D1 & 0.07125 & 25.45\%   & 6 & 75.00\%  \\
+    T2D2 & 0.09375 & 33.48\%   & 8 & 100.00\% \\
+    FP8  & 0.28    & 100.00\%  & 8 & 100.00\% \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table*}
+
+
+
+\begin{table*}[htbp]
+  \centering
+  \scriptsize
+  \caption{MMLU accuracy of Qwen3-0.6B-FP8 before and after PRIME conversion.}
+  \label{tab:qwen3_fp8_mmlu}
+  \resizebox{0.4\textwidth}{!}{
+  \begin{tabular}{lc}
+    \toprule
+    Config & MMLU Acc (\%) \\
+    \midrule
+    Pure FP8 (Baseline\_a8w8) & 26.78 \\
+    \midrule
+    T1D1 & 16.38 \\
+    T1D2 & 23.84 \\
+    T2D1 & 25.76 \\
+    T2D2 & 26.66 \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table*}
+
+\subsection{INT4 Format}
+
+Table~\ref{tab:int4_prime} summarizes the energy and bit-transmission analysis for INT4 operands.Table~\ref{tab:flatquant_prime_llama2} reports the accuracy of LLaMA2-7B under FlatQuant W4A4 quantization and further PRIME conversion.
+% \clearpage
+\begin{table*}[htbp]
+  \centering
+  \scriptsize
+  \caption{Energy and bit-transmission cost of INT4 format after PRIME conversion.}
+  \label{tab:int4_prime}
+  \resizebox{1\textwidth}{!}{
+  \begin{tabular}{lcccc}
+    \toprule
+    & Energy (pJ) & Energy Ratio (vs.\ INT4) & Transmission Bits & Transmission Ratio (vs.\ INT4) \\
+    \midrule
+    T1D1 & 0.01125  & 22.50\%   & 3 & 75.00\%  \\
+    T1D2 & 0.016875 & 33.75\%   & 4 & 100.00\% \\
+    T2D1 & 0.0375   & 75.00\%   & 4 & 100.00\% \\
+    INT4 & 0.05     & 100.00\%  & 4 & 100.00\% \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table*}
+
+
+
+\begin{table*}[htbp]
+  \centering
+  \scriptsize
+  \caption{Accuracy comparison of FlatQuant W4A4 and further PRIME conversion on LLaMA2-7B.}
+  \label{tab:flatquant_prime_llama2}
+  \resizebox{\textwidth}{!}{
+  \begin{tabular}{lcccccccc}
+    \toprule
+    & PPL(wiki) & PPL(c4) & ARC\_c & ARC\_e & Hella & LAMB & PIQA & Wino \\
+    \midrule
+    FlatQuant W4A4 & 5.69 & 7.62  & 44.37 & 73.11 & 74.80 & 72.27 & 77.86 & 67.88 \\
+    PRIME T1D1     & 9.50 & 13.79 & 35.49 & 63.68 & 64.62 & 62.62 & 75.19 & 62.04 \\
+    PRIME T1D2     & 6.15 & 8.33  & 40.44 & 69.70 & 72.52 & 70.64 & 77.20 & 66.46 \\
+    PRIME T2D1     & 6.17 & 8.38  & 43.00 & 70.03 & 72.58 & 70.06 & 76.44 & 64.25 \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table*}
+
+% Evaluation Hyperparameters section removed --- hyperparameters inlined in main text.
+
+
+
+\section{Limitations}
+Our current evaluation is simulation-based and does not include silicon measurements. However, since all underlying primitives (bit-shift, integer addition, and leading-one detection) are naively supported by standard digital logic, the proposed neuron dynamics require no custom analog or mixed-signal circuitry. Physical implementation is therefore a natural next step, which we leave to our future work.

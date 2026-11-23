@@ -1,0 +1,87 @@
+\documentclass{article}
+\usepackage{iclr2027_conference,times}
+\input{math_commands.tex}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{makecell}
+\usepackage{caption}
+\usepackage{ulem}
+\usepackage{wrapfig}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathrsfs}
+% \usepackage{float}
+\usepackage{dblfloatfix}
+
+\newcommand{\hwrevising}[1]{\textcolor{red}{#1}}
+\newcommand{\gushrevising}[1]{\textcolor{orange}{#1}}
+\newcommand{\symrevising}[1]{\textcolor{purple}{#1}}
+\newcommand{\hwrevised}[1]{\textcolor{black}{#1}}
+\newcommand{\gushrevised}[1]{\textcolor{blue}{#1}}
+\newcommand{\zjy}[1]{{\color{blue} #1}}
+% 允许浮动体占用页面的更大比例（默认 0.7）
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+% 允许浮动体放置的页面占比
+\renewcommand{\floatpagefraction}{0.9}
+\setlength{\dblfloatsep}{6pt plus 2pt minus 2pt}       % table* 之间的间距
+% \setlength{\dbltextfloatsep}{6pt plus 2pt minus 2pt}   % table* 与正文的间距
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{6pt plus 2pt minus 2pt}
+\setlength{\intextsep}{6pt plus 2pt minus 2pt}
+\renewcommand{\dbltopfraction}{0.95}
+\renewcommand{\dblfloatpagefraction}{0.7}
+\newtheorem{proposition}{Proposition}
+\newtheorem{claim}{Claim}
+
+\definecolor{DarkGreen}{rgb}{0.0, 0.0, 0.5}
+
+\title{  \hwrevised{A New Perspective on} ANN-to-SNN Conversion: \\ Hardware-Aligned Multi-Threshold Neuron Dynamics for Neuromorphic Inference}
+
+% ICLR: anonymous submission, no author info
+\author{
+  Anonymous Authors
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+By accumulating spikes over multiple timesteps, rate coding approximates the real-valued activations of an ANN, a principle that underpins numerous ANN-to-SNN conversion methods. However, the converted SNNs typically incur loss in accuracy compared to the original ANN.
+Existing methods either increase a number of timesteps or introduce more complex neuronal dynamics to reduce this accuracy gap. Yet, both approaches ultimately lead to the same outcome: redundancy either in information or in computation, thereby suffering from efficiency degradation.
+
+To address this issue, we propose \textbf{PRIME} (\underline{P}otential-\underline{R}esidual \underline{I}ntegration for \underline{M}ulti-threshold \underline{E}ncoding), a \textbf{training-free} multi-threshold concurrent spiking neuron framework redesigned from a hardware data representation perspective:
+a) We introduce the Residual Membrane Potential Amplification (RMPA) mechanism, which replaces rate coding with Integration Coding by actively amplifying the residual membrane potential. RMPA enables the binary representation of spikes to carry substantially more information, achieving near-lossless conversion with as few as two timesteps.
+b) Complementarily, we implement concurrent spike firing in multi-threshold neurons, where spikes are decoded directly from the binary representation of floating-point data, eliminating membrane potential--threshold comparisons and replacing multiplications with lightweight bit-shift and accumulation operations that align with hardware computation primitives. At $T=2$ and $D=3$, we achieve competitive performance across both vision and language benchmarks with only 40.6\% of the FP32 bit-transmission cost (81.3\% of FP16) and 10.5\% of the FP32 multiplication energy consumption (35.5\% of FP16).
+The PRIME framework establishes a new design principle for efficient ANN-to-SNN conversion, bridging the gap between algorithmic efficiency and hardware constraints.
+\end{abstract}
+
+\input{iclr_intro}
+\input{iclr_relatedworks}
+\input{iclr_method}
+\input{iclr_experiments}
+\input{iclr_conclusion}
+\input{iclr_aiused}
+\bibliographystyle{iclr2027_conference}
+\bibliography{reference}
+
+\clearpage
+\input{iclr_appendix}
+\end{document}
