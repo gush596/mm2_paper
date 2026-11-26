@@ -114,7 +114,15 @@ The RMPA-based MTN iteratively generates sub-threshold spikes from the residual 
 \end{equation}
 \added{That is, the residual membrane potential is doubled at each amplification loop, and a spike is fired when the amplified membrane potential reaches the base threshold $\theta^\ell$; the actual amplitude of the emitted spike is $\theta^\ell / 2^{i-1}$.}
 
-\added{Note that $D$ denotes the intra-timestep spike dimension, i.e., the number of consecutive mantissa bits read per timestep, and the above firing rule corresponds to the basic case of $D = 1$. When $D > 1$, the spike implementation is generalized as: the residual membrane potential is amplified by $2^{D}$ at once, i.e., $\mathbf{V}^\ell = 2^D \cdot \mathbf{m}_{rest}^\ell$, and the emitted spike is the $D$-bit unsigned integer $S = \max\{s \in \{0, 1, \ldots, 2^D - 1\} \mid \mathbf{V}^\ell \ge s\,\theta\}$, representing 0 to $2^D - 1$ times the corresponding threshold. Between two timesteps, the membrane potential is further amplified by $2^{n}$ until $\mathbf{V}^\ell > \theta$, which describes the transition between successive timesteps. The setting of $D > 1$ is mainly designed to adapt to the current mainstream binary hardware forms, while it can also be applied on future neuromorphic chips.}
+\added{Note that $D$ denotes the intra-timestep spike dimension, i.e., the number of consecutive mantissa bits read per timestep, and the above firing rule corresponds to the basic case of $D = 1$. When $D > 1$, the spike implementation is generalized as follows: the residual membrane potential is amplified by $2^{D}$ at once,}
+\begin{equation}
+\added{\quad\mathbf{V}^\ell = 2^D \cdot \mathbf{m}_{rest}^\ell,}
+\end{equation}
+\added{and the emitted spike is the $D$-bit unsigned integer}
+\begin{equation}
+\added{\quad S = {\max\{s \in \{0, 1, \ldots, 2^D - 1\} \mid \mathbf{V}^\ell \ge s\,\theta\}}_2,}
+\end{equation}
+\added{representing 0 to $2^D - 1$ times the corresponding threshold. Between two timesteps, the membrane potential is further amplified by $2^{n}$ until $\mathbf{V}^\ell > \theta$, which describes the transition between successive timesteps. The setting of $D > 1$ is mainly designed to adapt to the current mainstream binary hardware forms, while it can also be applied on future neuromorphic chips.}
 
 A soft reset is then applied as defined in Eq.~\eqref{eqa:reset}. Once the membrane potential reaches zero or the prescribed number of iterations is exhausted, the neuron decodes the emitted spike sequence to produce the total output signal of layer $\ell$:
 \begin{equation}
