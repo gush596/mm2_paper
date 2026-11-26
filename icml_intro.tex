@@ -1,0 +1,29 @@
+\section{Introduction}
+
+ Human brains execute high-level cognitive tasks at remarkably low energy cost~\cite{gerstner2014neuronal,izhikevich2003simple}, offering a compelling biological blueprint for energy-efficient hardware design. Spiking neural networks (SNNs) emulate spike-based biological communication, inheriting high sparsity and event-driven processing~\cite{maass1997networks,davies2018loihi}. While direct training via surrogate gradients suffers from approximation errors and expensive spatio-temporal backpropagation~\cite{gygax2024,zhu2024osr}, ANN-to-SNN conversion has emerged as the dominant cost-effective paradigm for obtaining high-performance SNNs~\cite{cao2015spiking}.
+
+Existing conversion methods rely predominantly on rate coding~\cite{rueckauer2017conversion} and fall into two categories: (1) \textbf{extending timesteps}, where fidelity asymptotically improves with more timesteps~\cite{jelly}, and (2) \textbf{introducing auxiliary neuronal dynamics}, such as differential encoding or multi-threshold mechanisms that \hwrevised{store}   multiple pre-set thresholds~\cite{dcgs,spikellm}. The former incurs \textit{information redundancy}, as a single activation value requires sizable spikes across many timesteps. The latter introduces \textit{computational redundancy} through complex computations imposed by auxiliary neuronal dynamics. Both pathways share a common root: neither exploits the intrinsic alignment between SNN spike representations and the binary data formats native to modern hardware.
+
+We identify two complementary insights that address this gap. %\hwrevising{ From an algorithm perspective},
+The conversion error stems from residual membrane potential — the unencoded input remaining after all timesteps. Conventional approaches passively wait for this residual to dissipate, yielding only marginal per-step gains. Actively amplifying the residual instead enables exponential suppression of conversion error. From a hardware perspective, binary spike sequences share the same underlying representation as stored binary data, suggesting that spike thresholds and amplitudes can be read directly from floating-point bit fields, tightly coupling neuronal dynamics with the native hardware data format.
+
+Guided by these insights, we propose \textbf{PRIME} (\underline{P}otential-\underline{R}esidual \underline{I}ntegration for \underline{M}ulti-threshold \underline{E}ncoding), a \textbf{training-free} conversion framework.
+\textbf{At the encoding level}, the Residual Membrane Potential Amplification (RMPA) mechanism actively amplifies residual membrane potential per step, enabling near-lossless conversion at $T \leq 2$ without auxiliary compensation. \textbf{At the inference level}, spike thresholds and amplitudes are read directly from the sign, exponent, and mantissa bits of floating-point values, eliminating membrane potential accumulation and multi-threshold comparison. Reading $D$ consecutive mantissa bits enables concurrent multi-bit spike emission per step; when $T \leq 2$, inter-step independence allows fully parallel inference with multiplications replaced by shift-and-add operations. PRIME simultaneously resolves the information redundancy of time-step extension and the computational redundancy of threshold storage. Extensive experiments on CV and NLP tasks validate its effectiveness. Our main contributions are summarized as follows:
+\begin{itemize}
+\item \textbf{At the encoding level}, we propose the RMPA mechanism and Integration Coding, which actively amplify residual membrane potential to maximize per-step information density, achieving near-lossless conversion at $T \leq 2$ without auxiliary compensation.
+\item \textbf{At the inference level}, we propose a hardware-native spike-driven inference scheme that couples neuronal dynamics with floating-point bit representations, replacing multiplications with shift-and-add operations. When $T \leq 2$, inter-step independence enables fully parallel inference; when $D \leq 3$, each intra-step computation requires at most a single adder.
+\item Building upon these two designs, we propose \textbf{PRIME}, a unified  ANN-to-SNN conversion framework that jointly addresses encoding inefficiency and hardware deployment overhead.
+
+\item Extensive experiments demonstrate that under $T=2$, $D=3$, PRIME achieves near-lossless conversion accuracy on representative CV and NLP benchmarks, with energy consumption at 10.5\% of FP32 multiplication (35.5\% of FP16) and bit-transmission cost between layers at 40.6\% of FP32 (81.3\% of FP16), providing a strong foundation for energy-efficient neuromorphic hardware design.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+

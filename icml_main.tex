@@ -1,0 +1,112 @@
+%%%%%%%% ICML VERSION (converted from the ICLR source) %%%%%%%%%%%%%%%%%
+% =====================================================================
+% 修改标注图例 (Revision mark legend):
+%   \added{...}    -> \textcolor{blue}{...}          新增内容 (blue)
+%   \moved{...}    -> \textcolor{orange}{...}        移位内容 (orange)
+%   \deleted{...}  -> \textcolor{red}{\sout{...}}    删除内容 (red, strikethrough)
+%   \movednote{...}-> orange italic note             移位说明 (where text moved)
+% =====================================================================
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+\usepackage{hyperref}
+\usepackage{url}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2026}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{xcolor}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{enumitem}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[normalem]{ulem}
+
+\input{math_commands.tex}
+
+% =====================================================================
+% Revision-mark macros / 修改标注宏
+% =====================================================================
+\newcommand{\added}[1]{\textcolor{blue}{#1}}
+\newcommand{\moved}[1]{\textcolor{orange}{#1}}
+\newcommand{\deleted}[1]{\textcolor{red}{\sout{#1}}}
+\newcommand{\movednote}[1]{\textcolor{orange}{\textit{[#1]}}}
+\newcommand{\deletednote}[1]{\textcolor{red}{\textit{[#1]}}}
+\newcommand{\movedparagraph}[1]{\paragraph{\textcolor{orange}{#1}}}
+\newcommand{\addedparagraph}[1]{\paragraph{\textcolor{blue}{#1}}}
+\newenvironment{addedblock}{\color{blue}}{}
+\newenvironment{movedblock}{\color{orange}}{}
+% legacy revision macros from the ICLR source (finalized text, pass through)
+\newcommand{\hwrevised}[1]{#1}
+\newcommand{\hwrevising}[1]{#1}
+\newcommand{\gushrevised}[1]{#1}
+\newcommand{\gushrevising}[1]{#1}
+\newcommand{\symrevising}[1]{#1}
+\newcommand{\zjy}[1]{#1}
+
+\theoremstyle{plain}
+\newtheorem{proposition}{Proposition}
+
+% The \icmltitle you define below is probably too long as a header.
+\icmltitlerunning{PRIME: Potential-Residual Integration for Multi-Threshold Encoding}
+
+\begin{document}
+
+\twocolumn[
+  \icmltitle{\added{PRIME: Potential-Residual Integration for Multi-Threshold
+  Encoding for \mbox{Training-Free} ANN-to-SNN Conversion}
+  \\[2pt]
+  {\normalsize \deleted{A New Perspective on ANN-to-SNN Conversion:
+  Hardware-Aligned Multi-Threshold Neuron Dynamics for Neuromorphic Inference}}}
+
+  \begin{icmlauthorlist}
+    \icmlauthor{Anonymous authors}{}
+  \end{icmlauthorlist}
+
+  \icmlkeywords{Machine Learning, ICML}
+
+  \vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+\noindent\footnotesize
+\textbf{\added{Revision mark legend (temporary, for review only):}}
+\added{blue $=$ added content}, \moved{orange $=$ moved content},
+\deleted{red $=$ deleted content}, \movednote{orange italic $=$ move notes}.
+\par\vspace{2pt}
+
+\begin{abstract}
+By accumulating spikes over multiple timesteps, rate coding approximates the real-valued activations of an ANN, a principle that underpins numerous ANN-to-SNN conversion methods. However, the converted SNNs typically incur loss in accuracy compared to the original ANN.
+Existing methods either increase a number of timesteps or introduce more complex neuronal dynamics to reduce this accuracy gap. Yet, both approaches ultimately lead to the same outcome: redundancy either in information or in computation, thereby suffering from efficiency degradation.
+To address this issue, we propose \textbf{PRIME} (\underline{P}otential-\underline{R}esidual \underline{I}ntegration for \underline{M}ulti-threshold \underline{E}ncoding), a \textbf{training-free} multi-threshold concurrent spiking neuron framework redesigned from a hardware data representation perspective:
+a) We introduce the Residual Membrane Potential Amplification (RMPA) mechanism, which replaces rate coding with Integration Coding by actively amplifying the residual membrane potential. RMPA enables the binary representation of spikes to carry substantially more information, achieving near-lossless conversion with as few as two timesteps.
+b) Complementarily, we implement concurrent spike firing in multi-threshold neurons, where spikes are decoded directly from the binary representation of floating-point data, eliminating membrane potential--threshold comparisons and replacing multiplications with lightweight bit-shift and accumulation operations that align with hardware computation primitives. At $T=2$ and $D=3$, we achieve competitive performance across both vision and language benchmarks with only 40.6\% of the FP32 bit-transmission cost (81.3\% of FP16) and 10.5\% of the FP32 multiplication energy consumption (35.5\% of FP16).
+The PRIME framework establishes a new design principle for efficient ANN-to-SNN conversion, bridging the gap between algorithmic efficiency and hardware constraints.
+\end{abstract}
+
+\input{icml_intro}
+\input{icml_relatedworks}
+\input{icml_method}
+\input{icml_experiments}
+\input{icml_conclusion}
+
+\bibliographystyle{icml2026}
+\bibliography{reference}
+
+\appendix
+\input{icml_appendix}
+
+\end{document}
