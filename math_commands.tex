@@ -31,10 +31,10 @@
 \def\twosecrefs#1#2{sections \ref{#1} and \ref{#2}}
 % Reference to three sections.
 \def\secrefs#1#2#3{sections \ref{#1}, \ref{#2} and \ref{#3}}
-% Reference to an equation, lower-case.
-\def\eqref#1{equation~\ref{#1}}
-% Reference to an equation, upper case
-\def\Eqref#1{Equation~\ref{#1}}
+% Reference to an equation, standard parenthesized form, e.g., (5).
+\def\eqref#1{(\ref{#1})}
+% Reference to an equation, upper case, e.g., Equation (5).
+\def\Eqref#1{Equation~(\ref{#1})}
 % A raw reference to an equation---avoid using if possible
 \def\plaineqref#1{\ref{#1}}
 % Reference to a chapter, lower-case.
