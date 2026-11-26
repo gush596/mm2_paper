@@ -114,7 +114,7 @@ The RMPA-based MTN iteratively generates sub-threshold spikes from the residual 
 \end{equation}
 \added{That is, the residual membrane potential is doubled at each amplification loop, and a spike is fired when the amplified membrane potential reaches the base threshold $\theta^\ell$; the actual amplitude of the emitted spike is $\theta^\ell / 2^{i-1}$.}
 
-\added{Note that $D$ denotes the intra-timestep spike dimension, i.e., the number of consecutive mantissa bits read per timestep, and the above firing rule corresponds to the basic case of $D = 1$. When $D > 1$, the spike implementation is generalized as follows: the residual membrane potential is amplified by $2^{D}$ at once,}
+\added{To enable efficient implementation on mainstream binary hardware, we additionally introduce the concept of $D$. $D$ denotes the intra-timestep spike dimension, i.e., the number of consecutive mantissa bits read per timestep, and the above firing rule corresponds to the basic case of $D = 1$. When $D > 1$, the encoding can also be realized in the form of spike emission: the residual membrane potential is amplified by $2^{D}$ at once,}
 \begin{equation}
 \added{\quad\mathbf{V}^\ell = 2^D \cdot \mathbf{m}_{rest}^\ell,}
 \end{equation}
