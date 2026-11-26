@@ -19,9 +19,18 @@
 
 ## 环境与工具备忘
 - GitHub 操作走 SSH key `ssh/github_ed25519`（GIT_SSH_COMMAND 方式）；**不输出私钥内容、不操作 ~/.ssh**
-- 机器无 pdflatex、无 root apt；编译验证用免 root 的 **tectonic**（在 `.openclaw/tmp/paper_edit/tectonic`，首次编译需联网拉 bundle，较慢）
+- 机器无 pdflatex、无 root apt；编译验证用免 root 的 **tectonic**（在 `tools/tectonic`，首次编译需联网拉 bundle，较慢）
 - GitHub HTTPS 大文件下载易截断（curl 会停在几 MB），**wget -c 续传更可靠**
 - 论文验证公式编号用 `pdftotext`（含 -layout / 分页 dump；两栏版面提取顺序会乱，要以源码顺序为准）
+
+## 下次会话快速恢复手册（拿到记忆文件后照此执行）
+1. **论文仓库**：`mm2_paper/` 本地已克隆；若没了重新拉：`GIT_SSH_COMMAND="ssh -i ssh/github_ed25519 -o IdentitiesOnly=yes" git clone git@github.com:gush596/mm2_paper.git`
+2. **Git SSH key**：私钥 `ssh/github_ed25519`、公钥 `ssh/github_ed25519.pub`（公钥已注册到用户 GitHub）。所有 git 命令加 `GIT_SSH_COMMAND="ssh -i $PWD/ssh/github_ed25519 -o IdentitiesOnly=yes"`。
+   - 若密钥丢失：立即生成新 ed25519 密钥对（`ssh-keygen -t ed25519 -C gush14@foxmail.com -f ssh/github_ed25519 -N ""`），把**公钥**给用户让他添加到 GitHub Settings → SSH keys，然后继续。
+   - **红线：私钥内容永远不在聊天/仓库/任何外发渠道出现**，只给公钥。
+3. **LaTeX 环境**：`tools/tectonic`（免 root，linux x86_64，仓库里有备份）。编译：`cd mm2_paper && ../tools/tectonic -X compile icml_main.tex`（编译产物直接覆盖 icml_main.pdf）。bundle 缓存在 `~/.cache/tectonic`，在则编译快；丢了会自动重新联网下载（慢）。
+   - 若 tectonic 二进制丢失：从仓库 `tools/tectonic` 复制，或 `wget -c` 从 GitHub releases 拉 `tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz`（curl 大文件易截断，用 wget）。
+4. **论文修改规范**：改 icml_* 文件；所有改动用颜色宏标注（见上）；英语复用原句式；改完 commit + push；拿不准的位置直接问用户。
 
 ## 待办 / 开放问题
 - 2026-11-26：用户要求"记忆也要上传"，但 mm2_paper 是公开仓（记忆含个人信息不宜放进去），且没找到现成的记忆仓库——等用户指定/创建私人仓库后推送
