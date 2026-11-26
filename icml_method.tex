@@ -144,6 +144,17 @@ Our proposed neurons offer two key advantages: (i) threshold storage is reduced 
 
 \moved{The conversion error in ANN-to-SNN algorithms arises primarily from residual membrane potential below the threshold that fails to generate corresponding spikes.}
 
+\added{The error bounds of rate coding and the proposed encoding are summarized in the following proposition.}
+\movednote{This proposition and the following paragraph are moved from the end of Subsection~\ref{sec:method-ic} of the previous version to here, merging the error analysis into this subsection.}
+\begin{proposition}[\moved{Error Bound of RMPA-based MTN}]
+\label{prop:rmpa-mtn-error-bound}
+    \moved{The encoding error of rate coding is bounded by
+    $\varepsilon_{\text{rate}} < \theta/2T,$
+which decays linearly with $T$. In contrast, the proposed PRIME encoding attains a bound $\varepsilon_{\text{PRIME}} < \theta/2^{T \cdot D + 1}$, which decays exponentially with $T$, where $\theta$ denotes the spike threshold, $T$ the number of inter-timesteps, and $D$ the number of concurrent intra-timestep spikes.}
+\end{proposition}
+
+\moved{\deleted{The full proof is given in Appendix~\ref{sec:error}.} \added{The detailed derivation is given below.} Accordingly, the error bound of our proposed MTN is significantly tighter than that of conventional MTN: for instance with $T=2$ and $D=3$, the error bound of PRIME is $\theta / 2^{7} = \theta / 128$, which is $32\times$ tighter than the rate coding bound of $\theta / 4$.}
+
 \movedparagraph{Conventional Rate Coding}
 
 \moved{In conventional ANN-to-SNN conversion, the neuron accumulates the input signal $\mathbf{I}$ at each timestep:}
@@ -229,17 +240,6 @@ n \geq T \cdot D,
 \end{movedblock}
 
 \added{That is, the first term $\sum_{i_{where\, S_i =1}} \frac{\theta}{2^{i-1}}$ is the value encoded by the emitted spikes, and the second term $\mathbf{m}_{\text{rest}}/2^{n}$ is the residual encoding error, which decays exponentially with the number of amplifications $n$. Compared with the error $< \theta/2T$ of rate coding, the error of the proposed method distributes within $\theta/2^{T \cdot D + 1}$, and thus the error distribution of the proposed encoding is significantly reduced.}
-
-\added{The error bounds derived above are summarized in the following proposition.}
-\movednote{This proposition and the following paragraph are moved from the end of Subsection~\ref{sec:method-ic} of the previous version to here, merging the error analysis into this subsection.}
-\begin{proposition}[\moved{Error Bound of RMPA-based MTN}]
-\label{prop:rmpa-mtn-error-bound}
-    \moved{The encoding error of rate coding is bounded by
-    $\varepsilon_{\text{rate}} < \theta/2T,$
-which decays linearly with $T$. In contrast, the proposed PRIME encoding attains a bound $\varepsilon_{\text{PRIME}} < \theta/2^{T \cdot D + 1}$, which decays exponentially with $T$, where $\theta$ denotes the spike threshold, $T$ the number of inter-timesteps, and $D$ the number of concurrent intra-timestep spikes.}
-\end{proposition}
-
-\moved{\deleted{The full proof is given in Appendix~\ref{sec:error}.} \added{The detailed derivation is given above.} Accordingly, the error bound of our proposed MTN is significantly tighter than that of conventional MTN: for instance with $T=2$ and $D=3$, the error bound of PRIME is $\theta / 2^{7} = \theta / 128$, which is $32\times$ tighter than the rate coding bound of $\theta / 4$.}
 
 \subsection{Hardware-efficient Inference}
 \label{sec:hw}
