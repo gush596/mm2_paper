@@ -25,8 +25,7 @@
 
 ## 下次会话快速恢复手册（拿到记忆文件后照此执行）
 1. **论文仓库**：`mm2_paper/` 本地已克隆；若没了重新拉：`GIT_SSH_COMMAND="ssh -i ssh/github_ed25519 -o IdentitiesOnly=yes" git clone git@github.com:gush596/mm2_paper.git`
-2. **Git SSH key**：私钥 `ssh/github_ed25519`、公钥 `ssh/github_ed25519.pub`（公钥已注册到用户 GitHub）。所有 git 命令加 `GIT_SSH_COMMAND="ssh -i $PWD/ssh/github_ed25519 -o IdentitiesOnly=yes"`。
-   - 若密钥丢失：立即生成新 ed25519 密钥对（`ssh-keygen -t ed25519 -C gush14@foxmail.com -f ssh/github_ed25519 -N ""`），把**公钥**给用户让他添加到 GitHub Settings → SSH keys，然后继续。
+2. **Git SSH key（用户定的规则：每次会话都重新生成，不做持久备份）**：开始干活前先生成新密钥对：`ssh-keygen -t ed25519 -C gush14@foxmail.com -f ssh/github_ed25519 -N ""`（如已有旧密钥，先把 ssh/ 下旧文件移到回收站再生成），然后把**公钥**（.pub）发给用户让他添加到 GitHub Settings → SSH keys（旧公钥可顺手删除）。之后所有 git 命令加 `GIT_SSH_COMMAND="ssh -i $PWD/ssh/github_ed25519 -o IdentitiesOnly=yes"`。
    - **红线：私钥内容永远不在聊天/仓库/任何外发渠道出现**，只给公钥。
 3. **LaTeX 环境**：`tools/tectonic`（免 root，linux x86_64，仓库里有备份）。编译：`cd mm2_paper && ../tools/tectonic -X compile icml_main.tex`（编译产物直接覆盖 icml_main.pdf）。bundle 缓存在 `~/.cache/tectonic`，在则编译快；丢了会自动重新联网下载（慢）。
    - 若 tectonic 二进制丢失：从仓库 `tools/tectonic` 复制，或 `wget -c` 从 GitHub releases 拉 `tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz`（curl 大文件易截断，用 wget）。
